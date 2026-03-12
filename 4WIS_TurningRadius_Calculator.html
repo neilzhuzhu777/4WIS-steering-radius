@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4WIS 四轮独立转向 — 低速转弯半径计算工具 v1.43b</title>
+<style>
+/* ===== THEME VARIABLES ===== */
+:root{
+--bg:#0f1219;--card:#1a1f2e;--card2:#232838;--accent:#3b82f6;--accent2:#60a5fa;
+--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--text:#e2e8f0;--text2:#94a3b8;--border:#2d3548;
+--cvbg:#1a1f2e;--grid:#1a2030;--bodyFill:rgba(59,130,246,0.07);--bodyStroke:rgba(59,130,246,0.5);
+--dimLine:rgba(255,255,255,0.25);--dimText:rgba(255,255,255,0.45);--legendText:#4a5568;
+--dynAccent:#a855f7;--dynAccent2:#c084fc;
+}
+html.light{
+--bg:#f1f5f9;--card:#ffffff;--card2:#f8fafc;--accent:#2563eb;--accent2:#1d4ed8;
+--green:#16a34a;--red:#dc2626;--orange:#d97706;--text:#1e293b;--text2:#64748b;--border:#cbd5e1;
+--cvbg:#ffffff;--grid:#e9edf2;--bodyFill:rgba(37,99,235,0.06);--bodyStroke:rgba(37,99,235,0.5);
+--dimLine:rgba(0,0,0,0.2);--dimText:rgba(0,0,0,0.4);--legendText:#64748b;
+--dynAccent:#7c3aed;--dynAccent2:#6d28d9;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:17px;font-weight:700;color:var(--accent)}.hdr .bdg{background:var(--accent);color:#fff;font-size:10px;padding:2px 7px;border-radius:8px}
+.hdr .sub{color:var(--text2);font-size:12px;margin-left:auto}
+.hdr .thm{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text);font-size:11px;cursor:pointer;margin-left:8px}
+.hdr .thm:hover{border-color:var(--accent)}
+.main{display:grid;grid-template-columns:370px 1fr 330px;gap:0;height:calc(100vh - 44px)}
+.pnl{padding:14px;overflow-y:auto;border-right:1px solid var(--border)}.pnl:last-child{border-right:none}
+.pnl h2{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.pnl h2 .ic{width:17px;height:17px;background:var(--accent);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+.grp{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:8px}
+.grp-t{font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
+.row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.row label{font-size:12px;color:var(--text2);min-width:76px}
+.row input[type=number]{width:70px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:12px;text-align:right}
+.row input[type=number]:focus{outline:none;border-color:var(--accent)}.row .u{font-size:11px;color:var(--text2);min-width:22px}
+.cw{display:flex;align-items:center;justify-content:center;background:var(--cvbg);position:relative;overflow:hidden;cursor:default}
+canvas{display:block}
+.tb{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:3px;z-index:10}
+.zb{width:30px;height:30px;background:var(--card);opacity:.92;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;transition:.12s}
+.zb:hover{border-color:var(--accent);color:var(--accent2)}.zb.on{background:rgba(59,130,246,.25);border-color:var(--accent);color:var(--accent2)}
+.zl{font-size:10px;color:var(--text2);text-align:center;background:var(--card);opacity:.92;border:1px solid var(--border);border-radius:3px;padding:1px 3px}
+.wi{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.wc{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:7px 8px}
+.wc .wn{font-size:11px;font-weight:600;margin-bottom:4px}.wn.fl{color:#3b82f6}.wn.fr{color:#8b5cf6}.wn.rl{color:#22c55e}.wn.rr{color:#f59e0b}
+.ar{display:flex;align-items:center;gap:3px;margin-bottom:4px}
+.ar input[type=number]{width:54px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:2px 3px;color:var(--accent);font-size:13px;font-weight:600;text-align:center}
+.ar input[type=number]:focus{outline:none;border-color:var(--accent)}.ar .ad{font-size:11px;color:var(--text2)}
+.ar .ab{width:22px;height:22px;background:var(--card);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}.ar .ab:hover{border-color:var(--accent);color:var(--accent2)}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;background:var(--bg);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer}
+.bp{background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 7px;border-radius:4px;cursor:pointer;flex:1;user-select:none;transition:.12s}.bp:hover{border-color:var(--accent);color:var(--accent2)}
+.rc{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:8px}
+.rc .lb{font-size:11px;color:var(--text2);margin-bottom:2px}.rc .vl{font-size:24px;font-weight:700;color:var(--green)}.rc .vl.w{color:var(--orange)}.rc .dt{font-size:11px;color:var(--text2);margin-top:2px}
+.ib{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:5px;padding:7px 9px;font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:8px}.ib b{color:var(--accent)}
+.wb{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:5px;padding:7px 9px;font-size:11px;color:var(--orange);line-height:1.5;margin-bottom:6px}
+.eb{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:5px;padding:7px 9px;font-size:11px;color:var(--red);line-height:1.5;margin-bottom:6px}
+table.rt{width:100%;border-collapse:collapse;font-size:12px}table.rt th{background:var(--card2);color:var(--text2);padding:4px 5px;text-align:left;font-weight:500;border-bottom:1px solid var(--border)}table.rt td{padding:4px 5px;border-bottom:1px solid var(--border)}
+/* Method toggle */
+.mtog{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:8px;font-size:11px}
+.mtog .mo{flex:1;padding:7px 4px;text-align:center;cursor:pointer;background:var(--card2);color:var(--text2);transition:.15s;border-right:1px solid var(--border);user-select:none;line-height:1.3}
+.mtog .mo:last-child{border-right:none}
+.mtog .mo.act{background:var(--accent);color:#fff;font-weight:600}
+.mtog .mo.act.dyn{background:var(--dynAccent);color:#fff}
+.mtog .mo:hover:not(.act){background:var(--card);color:var(--text)}
+/* Dynamic params group */
+.dyn-grp{transition:opacity .2s,max-height .3s;overflow:hidden}
+.dyn-grp.hide{opacity:0.3;max-height:0!important;padding:0!important;margin:0!important;border-color:transparent!important}
+/* Compare box */
+.cmp{background:var(--card);border:1px solid var(--dynAccent);border-radius:7px;padding:8px 10px;margin-bottom:8px}
+.cmp .cmp-t{font-size:11px;font-weight:600;color:var(--dynAccent);margin-bottom:4px}
+.cmp .cmp-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.cmp .cmp-lbl{color:var(--text2)}.cmp .cmp-val{font-weight:600}
+/* Self-check */
+.sc-panel{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:8px}
+.sc-panel summary{font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;user-select:none}
+.sc-panel .sc-body{margin-top:8px;font-size:11px;line-height:1.6}
+.sc-item{padding:4px 0;border-bottom:1px solid var(--border)}.sc-item:last-child{border-bottom:none}
+.sc-pass{color:var(--green)}.sc-fail{color:var(--red)}.sc-info{color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>4WIS 四轮独立转向 — 低速转弯半径计算工具</h1><span class="bdg">v1.43b</span>
+  <span class="sub">运动学+力学双模型 | 中键拖动 · 滚轮缩放</span>
+  <button class="thm" id="thmBtn" onclick="toggleTheme()">☀ 亮模式</button>
+</div>
+<div class="main">
+<div class="pnl">
+  <h2><span class="ic">⚙</span>车辆参数</h2>
+  <div class="grp"><div class="grp-t">底盘尺寸</div>
+    <div class="row"><label>轴距 L</label><input type="number" id="wheelbase" value="2900" step="10" min="1500" max="5000" onchange="calc()"><span class="u">mm</span></div>
+    <div class="row"><label>前轮距 Wf</label><input type="number" id="trackF" value="1600" step="10" min="1000" max="2500" onchange="calc()"><span class="u">mm</span></div>
+    <div class="row"><label>后轮距 Wr</label><input type="number" id="trackR" value="1600" step="10" min="1000" max="2500" onchange="calc()"><span class="u">mm</span></div>
+  </div>
+  <div class="grp dyn-grp hide" id="dynGrp"><div class="grp-t">力学参数（动力学模型专用）</div>
+    <div class="row"><label>整车质量 m</label><input type="number" id="mass" value="1800" step="50" min="500" max="5000" onchange="calc()"><span class="u">kg</span></div>
+    <div class="row"><label>车速 v</label><input type="number" id="speed" value="5" step="0.5" min="0.5" max="10" onchange="calc()"><span class="u">km/h</span></div>
+    <div class="row"><label>前轮侧偏刚度</label><input type="number" id="caF" value="50000" step="1000" min="10000" max="200000" onchange="calc()"><span class="u">N/rad</span></div>
+    <div class="row"><label>后轮侧偏刚度</label><input type="number" id="caR" value="50000" step="1000" min="10000" max="200000" onchange="calc()"><span class="u">N/rad</span></div>
+    <div class="ib" style="margin-top:4px"><b>注：</b>侧偏刚度为<b>单轮</b>值。前/后轴总刚度=2×单轮。质心位于几何中心 (L<sub>f</sub>=L<sub>r</sub>=L/2)。转动惯量估算 I<sub>z</sub>=m·L<sub>f</sub>·L<sub>r</sub>。</div>
+  </div>
+  <h2><span class="ic">🎯</span>四轮转角</h2>
+  <div class="ib"><b>角度：</b>左转为正, 右转为负。输入框精确输入, ±按钮0.5°微调, 滑块粗调。</div>
+  <div class="wi" id="wiCt"></div>
+  <h2 style="margin-top:8px"><span class="ic">⚡</span>快速预设</h2>
+  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px"><button class="bp" onclick="preset('acker_l')">阿克曼左转</button><button class="bp" onclick="preset('acker_r')">阿克曼右转</button><button class="bp" onclick="preset('crab')">蟹行</button><button class="bp" onclick="preset('pivot')">原地旋转</button></div>
+  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px"><button class="bp" onclick="preset('counter')">反相位</button><button class="bp" onclick="preset('inphase')">同相位</button><button class="bp" onclick="preset('toein')">内八字</button><button class="bp" onclick="preset('toeout')">外八字</button></div>
+  <div style="display:flex;gap:3px;flex-wrap:wrap"><button class="bp" onclick="preset('diag')">对角行驶</button><button class="bp" onclick="preset('straight')">直行</button><button class="bp" onclick="preset('rear_only')">仅后轮</button></div>
+</div>
+<div class="cw" id="cw"><canvas id="cv"></canvas>
+  <div class="tb">
+    <button class="zb" onclick="zoomStep(1.3)" title="放大">＋</button>
+    <button class="zb" onclick="zoomStep(1/1.3)" title="缩小">－</button>
+    <button class="zb" onclick="resetView()" title="重置视图">⟲</button>
+    <div class="zl" id="zLbl">100%</div>
+    <button class="zb" id="animB" onclick="toggleAnim()" title="运动动画" style="font-size:10px;margin-top:6px">▶动画</button>
+  </div>
+</div>
+<div class="pnl">
+  <h2><span class="ic">🔀</span>计算方法</h2>
+  <div class="mtog">
+    <div class="mo act" onclick="setMethod('kin')" id="mKin">运动学<br><span style="font-size:10px;font-weight:400">几何最小二乘ICR</span></div>
+    <div class="mo" onclick="setMethod('dyn')" id="mDyn">动力学<br><span style="font-size:10px;font-weight:400">四轮独立力学</span></div>
+  </div>
+  <h2><span class="ic">📊</span>计算结果</h2>
+  <div class="rc"><div class="lb">质心转弯半径 R<sub>cg</sub> <span id="rv_method" style="font-weight:600"></span></div><div class="vl" id="rv_r">—</div><div class="dt" id="rv_d"></div></div>
+  <div class="rc"><div class="lb">转向中心 (ICR)</div><div class="vl" style="font-size:15px" id="rv_i">—</div></div>
+  <div class="rc"><div class="lb">转向模式</div><div class="vl" style="font-size:15px" id="rv_m">—</div></div>
+  <div id="wA"></div>
+  <div class="cmp" id="cmpBox" style="display:none">
+    <div class="cmp-t">▸ 双模型对比</div>
+    <div class="cmp-row"><span class="cmp-lbl">运动学 R<sub>kin</sub></span><span class="cmp-val" id="cmp_rk">—</span></div>
+    <div class="cmp-row"><span class="cmp-lbl">动力学 R<sub>dyn</sub></span><span class="cmp-val" id="cmp_rd">—</span></div>
+    <div class="cmp-row"><span class="cmp-lbl">差异 ΔR</span><span class="cmp-val" id="cmp_dr">—</span></div>
+    <div class="cmp-row"><span class="cmp-lbl">差异比 ΔR/R<sub>kin</sub></span><span class="cmp-val" id="cmp_pct">—</span></div>
+    <div id="cmp_note" style="font-size:10px;color:var(--text2);margin-top:4px"></div>
+  </div>
+  <div id="dynExtra" style="display:none">
+    <div class="rc"><div class="lb">稳态横摆角速度 ω</div><div class="vl" style="font-size:15px" id="rv_omega">—</div></div>
+    <div class="rc"><div class="lb">车身侧偏角 β</div><div class="vl" style="font-size:15px" id="rv_beta">—</div></div>
+  </div>
+  <h2><span class="ic">📐</span>各轮参数</h2>
+  <table class="rt"><tr><th>轮</th><th>角度°</th><th>半径mm</th><th>速度比</th><th id="thSlip" style="display:none">侧偏°</th></tr>
+  <tr><td style="color:#3b82f6">FL</td><td id="w0a">-</td><td id="w0r">-</td><td id="w0v">-</td><td id="w0s" style="display:none">-</td></tr>
+  <tr><td style="color:#8b5cf6">FR</td><td id="w1a">-</td><td id="w1r">-</td><td id="w1v">-</td><td id="w1s" style="display:none">-</td></tr>
+  <tr><td style="color:#22c55e">RL</td><td id="w2a">-</td><td id="w2r">-</td><td id="w2v">-</td><td id="w2s" style="display:none">-</td></tr>
+  <tr><td style="color:#f59e0b">RR</td><td id="w3a">-</td><td id="w3r">-</td><td id="w3v">-</td><td id="w3s" style="display:none">-</td></tr></table>
+  <h2 style="margin-top:10px"><span class="ic">ℹ</span>力学假设</h2>
+  <div class="ib" id="assumptionBox"><b>低速运动学(&lt;10km/h)：</b><br>1.忽略轮胎侧偏角<br>2.忽略离心力/载荷转移<br>3.纯滚动无侧滑<br>4.平坦路面,稳态转向<br><br><b>建议：</b>&gt;30km/h需动力学模型。</div>
+  <details class="sc-panel">
+    <summary>🧪 自检结果（展开查看）</summary>
+    <div class="sc-body" id="scBody">计算后自动生成...</div>
+  </details>
+</div>
+</div>
+<script>
+const D=Math.PI/180,TW=225,TL=650,BOUND=150000;
+let manualZoom=1,panX=0,panY=0;
+let animOn=false,animAngle=0,animId=null,animTrail=[];
+let lastResult=null,lastParams=null,isDark=true;
+let currentMethod='kin';
+let lastKinResult=null,lastDynResult=null;
+
+function toggleTheme(){isDark=!isDark;document.documentElement.classList.toggle('light',!isDark);document.getElementById('thmBtn').textContent=isDark?'☀ 亮模式':'🌙 暗模式';draw();}
+
+function setMethod(m){
+  currentMethod=m;
+  document.getElementById('mKin').className='mo'+(m==='kin'?' act':'');
+  document.getElementById('mDyn').className='mo dyn'+(m==='dyn'?' act':'');
+  document.getElementById('dynGrp').classList.toggle('hide',m==='kin');
+  document.getElementById('dynExtra').style.display=m==='dyn'?'':'none';
+  document.getElementById('cmpBox').style.display=m==='dyn'?'':'none';
+  const show=m==='dyn';
+  document.getElementById('thSlip').style.display=show?'':'none';
+  for(let i=0;i<4;i++)document.getElementById('w'+i+'s').style.display=show?'':'none';
+  if(m==='kin'){
+    document.getElementById('assumptionBox').innerHTML='<b>低速运动学(&lt;10km/h)：</b><br>1.忽略轮胎侧偏角<br>2.忽略离心力/载荷转移<br>3.纯滚动无侧滑<br>4.平坦路面,稳态转向<br><br><b>建议：</b>&gt;30km/h需动力学模型。';
+  } else {
+    document.getElementById('assumptionBox').innerHTML='<b>四轮独立力学模型：</b><br>1.线性轮胎侧偏 F<sub>y</sub>=C<sub>α</sub>·α<br>2.稳态条件 (dω/dt=0, dv<sub>y</sub>/dt=0)<br>3.小角度近似 tan(α)≈α<br>4.忽略纵向力耦合<br>5.质心在几何中心<br><br><b>精度：</b>保留全部四轮独立转角与侧偏修正。';
+  }
+  calc();
+}
+
+const WC=[{id:'fl',l:'FL 左前 δ₁',c:'fl',v:30},{id:'fr',l:'FR 右前 δ₂',c:'fr',v:20},{id:'rl',l:'RL 左后 δ₃',c:'rl',v:0},{id:'rr',l:'RR 右后 δ₄',c:'rr',v:0}];
+(function(){const ct=document.getElementById('wiCt');for(const w of WC)ct.innerHTML+=`<div class="wc"><div class="wn ${w.c}">◼ ${w.l}</div><div class="ar"><button class="ab" onclick="nudge('${w.id}',-0.5)">−</button><input type="number" id="n_${w.id}" value="${w.v}" step="0.5" min="-90" max="90" onchange="syncN('${w.id}')"><span class="ad">°</span><button class="ab" onclick="nudge('${w.id}',0.5)">+</button></div><input type="range" id="s_${w.id}" min="-90" max="90" value="${w.v}" step="0.5" oninput="syncS('${w.id}')"></div>`;})();
+
+function syncS(w){document.getElementById('n_'+w).value=document.getElementById('s_'+w).value;calc();}
+function syncN(w){let v=Math.max(-90,Math.min(90,+document.getElementById('n_'+w).value));document.getElementById('n_'+w).value=v;document.getElementById('s_'+w).value=v;calc();}
+function nudge(w,d){let v=Math.round((+document.getElementById('n_'+w).value+d)*10)/10;v=Math.max(-90,Math.min(90,v));document.getElementById('n_'+w).value=v;document.getElementById('s_'+w).value=v;calc();}
+function zoomStep(f){manualZoom*=f;draw();}
+function resetView(){manualZoom=1;panX=0;panY=0;calc();}
+function gP(){return{L:+document.getElementById('wheelbase').value,Wf:+document.getElementById('trackF').value,Wr:+document.getElementById('trackR').value,d1:+document.getElementById('n_fl').value,d2:+document.getElementById('n_fr').value,d3:+document.getElementById('n_rl').value,d4:+document.getElementById('n_rr').value,mass:+document.getElementById('mass').value,speed:+document.getElementById('speed').value,caF:+document.getElementById('caF').value,caR:+document.getElementById('caR').value};}
+
+let dragging=false,dragSX=0,dragSY=0,dragPX0=0,dragPY0=0;
+const cvE=document.getElementById('cv'),cwE=document.getElementById('cw');
+cwE.addEventListener('mousedown',e=>{if(e.button===1){dragging=true;dragSX=e.clientX;dragSY=e.clientY;dragPX0=panX;dragPY0=panY;cwE.style.cursor='grabbing';e.preventDefault();}});
+window.addEventListener('mousemove',e=>{if(!dragging)return;const sc=curScale();panX=dragPX0+(e.clientX-dragSX)/sc;panY=dragPY0-(e.clientY-dragSY)/sc;draw();});
+window.addEventListener('mouseup',e=>{if(e.button===1&&dragging){dragging=false;cwE.style.cursor='default';}});
+cwE.addEventListener('wheel',e=>{e.preventDefault();manualZoom*=(e.deltaY<0?1.15:1/1.15);draw();},{passive:false});
+
+function curScale(){const p=lastParams||gP();const vs=Math.max(p.L,p.Wf)*3/manualZoom;return Math.min(cwE.clientWidth,cwE.clientHeight)*.85/vs;}
+
+function toggleAnim(){animOn=!animOn;const b=document.getElementById('animB');b.classList.toggle('on',animOn);b.textContent=animOn?'⏸停止':'▶动画';if(animOn){animAngle=0;animTrail=[];animLoop();}else{if(animId)cancelAnimationFrame(animId);animId=null;animAngle=0;animTrail=[];draw();}}
+function animLoop(){if(!animOn)return;
+  const p=lastParams||gP(),r=lastResult;if(!r){animId=requestAnimationFrame(animLoop);return;}
+  const speed=1389/30;
+  if(r.radius===Infinity||r.radius>1e6){
+    const avgD=(p.d1+p.d2+p.d3+p.d4)/4*D;
+    animAngle+=speed;
+    const cgX=p.L/2+Math.cos(avgD)*animAngle,cgY=Math.sin(avgD)*animAngle;
+    if(Math.abs(cgX)>BOUND/2||Math.abs(cgY)>BOUND/2){animAngle-=speed;}else animTrail.push({x:cgX,y:cgY});
+  } else {
+    const sign=r.icr.y>=0?1:-1;
+    const angSpeed=sign*speed/r.radius;
+    animAngle+=angSpeed;
+    const cgX=r.icr.x+((p.L/2)-r.icr.x)*Math.cos(animAngle)-(-r.icr.y)*Math.sin(animAngle);
+    const cgY=r.icr.y+((p.L/2)-r.icr.x)*Math.sin(animAngle)+(-r.icr.y)*Math.cos(animAngle);
+    if(Math.abs(cgX)>BOUND/2||Math.abs(cgY)>BOUND/2){animAngle-=angSpeed;}else animTrail.push({x:cgX,y:cgY});
+  }
+  if(animTrail.length>3000)animTrail.splice(0,animTrail.length-3000);
+  draw();animId=requestAnimationFrame(animLoop);
+}
+
+/* ========== METHOD A: Kinematic (geometric least-squares ICR) ========== */
+function computeKin(p){
+  const{L,Wf,Wr,d1,d2,d3,d4}=p;
+  const wh=[{name:'FL',x:L,y:Wf/2,delta:d1},{name:'FR',x:L,y:-Wf/2,delta:d2},{name:'RL',x:0,y:Wr/2,delta:d3},{name:'RR',x:0,y:-Wr/2,delta:d4}];
+  const ln=[];for(const w of wh){const r=w.delta*D,c=Math.cos(r),s=Math.sin(r);ln.push({a:c,b:s,c:c*w.x+s*w.y});}
+  const R={icr:null,radius:Infinity,mode:'',warnings:[],wheelData:wh,method:'kin',slipAngles:[0,0,0,0],omega:0,beta:0};
+  if(Math.abs(d1)<.1&&Math.abs(d2)<.1&&Math.abs(d3)<.1&&Math.abs(d4)<.1){R.mode='直行';return R;}
+  const fS=Math.abs(d1+d2)<.3&&Math.abs(d1)>.5,rS=Math.abs(d3+d4)<.3&&Math.abs(d3)>.5;
+  if(fS&&rS&&Math.abs(Math.abs(d1)-Math.abs(d3))<1){const fI=d1<0&&d2>0,rI=d3<0&&d4>0;if((fI&&rI)||(!fI&&!rI&&d1>0&&d2<0&&d3>0&&d4<0)){R.mode=fI?'前后对称内八字':'前后对称外八字';return R;}}
+  if(fS&&Math.abs(d3)<.1&&Math.abs(d4)<.1){R.mode='前轮对称内/外八字';return R;}
+  const av=(d1+d2+d3+d4)/4,sp=Math.max(Math.abs(d1-av),Math.abs(d2-av),Math.abs(d3-av),Math.abs(d4-av));
+  if(sp<1.5&&Math.abs(av)>2){R.mode='蟹行 (平移)';R.warnings.push('四轮同方向≈'+av.toFixed(1)+'°，R=∞');return R;}
+  let A00=0,A01=0,A11=0,B0=0,B1=0;for(const l of ln){A00+=l.a*l.a;A01+=l.a*l.b;A11+=l.b*l.b;B0+=l.a*l.c;B1+=l.b*l.c;}
+  const det=A00*A11-A01*A01;if(Math.abs(det)<1e-10){R.mode='平行轴';return R;}
+  const iX=(A11*B0-A01*B1)/det,iY=(A00*B1-A01*B0)/det;
+  let mx=0;for(const l of ln)mx=Math.max(mx,Math.abs(l.a*iX+l.b*iY-l.c));
+  if(mx>50)R.warnings.push('⚠ 轴线偏差'+mx.toFixed(0)+'mm，可能擦地');
+  R.icr={x:iX,y:iY};R.radius=Math.sqrt((iX-L/2)**2+iY**2);
+  for(const w of wh)w.radius=Math.sqrt((w.x-iX)**2+(w.y-iY)**2);
+  const mW=Math.max(...wh.map(w=>w.radius));for(const w of wh)w.speedRatio=mW>0?w.radius/mW:1;
+  const pv=Math.abs(d1-(-d4))<2&&Math.abs(d2-(-d3))<2&&Math.abs(d1)>20&&Math.abs(d3)>20;
+  if(pv||R.radius<L*.15){R.mode='原地旋转';if(R.radius<50)R.radius=0;}
+  else if(Math.abs(d3)<.5&&Math.abs(d4)<.5&&(Math.abs(d1)>.5||Math.abs(d2)>.5))R.mode='前轮转向(2WS)';
+  else if(Math.abs(d1)<.5&&Math.abs(d2)<.5)R.mode='仅后轮转向';
+  else if(d1*d3<0&&d2*d4<0)R.mode='反相位';
+  else if(d1*d3>0&&d2*d4>0)R.mode='同相位';
+  else R.mode='4WIS自由模式';
+  return R;
+}
+
+/* ========== METHOD B: Four-wheel independent dynamics (steady-state, linear tire) ========== */
+/*
+  Equations solved (steady-state, body-fixed frame, origin at CG):
+    Lateral force balance:   m·vx·ω = Σ Fy_body_i
+    Yaw moment balance:      0       = Σ (xi·Fy_body_i − yi·Fx_body_i)
+
+  Per wheel i at body position (xi, yi), steering angle δi, cornering stiffness Ci:
+    Slip angle:   αi = δi − (vy + ω·xi) / (vx − ω·yi)       [small-angle atan]
+    Wheel force:  Fw_i = Ci · αi
+    Body frame:   Fx_body_i = −Fw_i·sin(δi),  Fy_body_i = Fw_i·cos(δi)
+
+  Solved by Newton-Raphson iteration on (vy, ω).
+*/
+function computeDyn(p){
+  const{L,Wf,Wr,d1,d2,d3,d4,mass,speed,caF,caR}=p;
+  const kinR=computeKin(p);
+  // Degenerate cases: fallback to kinematic
+  if(kinR.radius===Infinity||kinR.radius>1e8||kinR.radius<50){
+    kinR.method='dyn';
+    if(kinR.radius<50) kinR.warnings.push('ℹ 原地旋转/极小半径，动力学退化');
+    else kinR.warnings.push('ℹ 无有限ICR，动力学退化为运动学');
+    return kinR;
+  }
+
+  const Lm=L/1000,Wfm=Wf/1000,Wrm=Wr/1000;
+  const Lf=Lm/2,Lr=Lm/2;
+  const vx=speed/3.6;
+  const m=mass;
+  const Iz=m*Lf*Lr;
+
+  const wheels=[
+    {x: Lf, y: Wfm/2, delta:d1*D, Ca:caF},
+    {x: Lf, y:-Wfm/2, delta:d2*D, Ca:caF},
+    {x:-Lr, y: Wrm/2, delta:d3*D, Ca:caR},
+    {x:-Lr, y:-Wrm/2, delta:d4*D, Ca:caR}
+  ];
+
+  // Newton-Raphson on [vy, omega]
+  let vy=0, omega=0;
+  // Initial guess from kinematic
+  if(kinR.radius>0&&kinR.radius<1e6){
+    const sgn=kinR.icr.y>=0?1:-1;
+    omega=sgn*vx/(kinR.radius/1000);
+  }
+
+  let converged=false;
+  for(let iter=0;iter<60;iter++){
+    let sF=0,sM=0, dF_dv=0,dF_dw=0, dM_dv=0,dM_dw=0;
+    for(const w of wheels){
+      const den=vx-omega*w.y;
+      if(Math.abs(den)<1e-8)continue;
+      const alpha=w.delta-(vy+omega*w.x)/den;
+      const Fw=w.Ca*alpha;
+      const cd=Math.cos(w.delta),sd=Math.sin(w.delta);
+      const Fxb=-Fw*sd, Fyb=Fw*cd;
+      sF+=Fyb; sM+=w.x*Fyb-w.y*Fxb;
+      const da_dv=-1/den;
+      const da_dw=-(w.x*vx+w.y*vy)/(den*den);
+      const dFw_dv=w.Ca*da_dv, dFw_dw=w.Ca*da_dw;
+      dF_dv+=cd*dFw_dv; dF_dw+=cd*dFw_dw;
+      dM_dv+=w.x*cd*dFw_dv-w.y*(-sd)*dFw_dv;
+      dM_dw+=w.x*cd*dFw_dw-w.y*(-sd)*dFw_dw;
+    }
+    const F1=sF-m*vx*omega, F2=sM;
+    const J00=dF_dv, J01=dF_dw-m*vx, J10=dM_dv, J11=dM_dw;
+    const detJ=J00*J11-J01*J10;
+    if(Math.abs(detJ)<1e-24)break;
+    const dv=(J11*F1-J01*F2)/detJ, dw=(-J10*F1+J00*F2)/detJ;
+    vy-=dv; omega-=dw;
+    if(Math.abs(dv)<1e-14&&Math.abs(dw)<1e-14){converged=true;break;}
+  }
+
+  const R_m=Math.abs(omega)>1e-12?Math.abs(vx/omega):Infinity;
+  const R_mm=R_m*1000;
+  const beta=Math.abs(vx)>1e-8?Math.atan2(vy,vx):0;
+
+  // Slip angles per wheel
+  const slips=[];
+  for(const w of wheels){
+    const den=vx-omega*w.y;
+    if(Math.abs(den)<1e-8){slips.push(0);continue;}
+    slips.push((w.delta-(vy+omega*w.x)/den)/D);
+  }
+
+  // ICR from dynamics: v_cg = ω × (CG - ICR), CG is origin in body frame
+  //   vx =  ω · (0 - ICR_y_cg) · (-1) ... actually use cross product properly:
+  //   v = ω × r  where r = CG - ICR = (0,0) - (ICRx, ICRy) = (-ICRx, -ICRy)
+  //   In 2D: ω × (-ICRx, -ICRy) = (ω·ICRy, -ω·ICRx)  [ω along z-axis]
+  //   So: vx = ω · ICR_y_cg  →  ICR_y_cg = vx / ω
+  //       vy = -ω · ICR_x_cg →  ICR_x_cg = -vy / ω
+  // In rear-axle frame: CG at (L/2, 0)
+  //   ICR_x = L/2 + ICR_x_cg·1000 = L/2 - (vy/ω)·1000
+  //   ICR_y = 0   + ICR_y_cg·1000  =       (vx/ω)·1000
+  let icrX=null,icrY=null;
+  if(Math.abs(omega)>1e-12){
+    icrX=L/2-(vy/omega)*1000;
+    icrY=(vx/omega)*1000;
+  }
+
+  const wh=[{name:'FL',x:L,y:Wf/2,delta:d1},{name:'FR',x:L,y:-Wf/2,delta:d2},{name:'RL',x:0,y:Wr/2,delta:d3},{name:'RR',x:0,y:-Wr/2,delta:d4}];
+  const R={icr:icrX!==null?{x:icrX,y:icrY}:null, radius:R_mm, mode:kinR.mode, warnings:[], wheelData:wh, method:'dyn', slipAngles:slips, omega:omega, beta:beta/D, converged};
+
+  if(!converged)R.warnings.push('⚠ 迭代未收敛');
+  if(R.icr){for(const w of wh)w.radius=Math.sqrt((w.x-R.icr.x)**2+(w.y-R.icr.y)**2);
+    const mW=Math.max(...wh.map(w=>w.radius||0));for(const w of wh)w.speedRatio=mW>0?(w.radius||0)/mW:1;
+  }else{for(const w of wh){w.radius=null;w.speedRatio=null;}}
+  const maxSlip=Math.max(...slips.map(Math.abs));
+  if(maxSlip>0.01)R.warnings.push('ℹ 最大侧偏角 '+maxSlip.toFixed(3)+'°');
+  return R;
+}
+
+function computeICR(p){return currentMethod==='dyn'?computeDyn(p):computeKin(p);}
+
+function preset(n){const P={acker_l:{fl:28,fr:22,rl:0,rr:0},acker_r:{fl:-22,fr:-28,rl:0,rr:0},crab:{fl:30,fr:30,rl:30,rr:30},pivot:{fl:45,fr:-45,rl:-45,rr:45},counter:{fl:30,fr:22,rl:-8,rr:-6},inphase:{fl:5,fr:3,rl:3,rr:2},toein:{fl:-15,fr:15,rl:-15,rr:15},toeout:{fl:15,fr:-15,rl:15,rr:-15},diag:{fl:45,fr:45,rl:-45,rr:-45},straight:{fl:0,fr:0,rl:0,rr:0},rear_only:{fl:0,fr:0,rl:-15,rr:-10}};
+const v=P[n];if(!v)return;['fl','fr','rl','rr'].forEach(w=>{document.getElementById('s_'+w).value=v[w];document.getElementById('n_'+w).value=v[w];});if(animOn){animAngle=0;animTrail=[];}calc();}
+
+function calc(){
+  const p=gP();
+  lastKinResult=computeKin(p);
+  lastDynResult=computeDyn(p);
+  lastResult=currentMethod==='dyn'?lastDynResult:lastKinResult;
+  lastParams=p;
+  updateUI(lastResult,p);
+  runSelfCheck(p);
+  if(!animOn)draw();
+}
+
+function updateUI(r,p){
+  const $=id=>document.getElementById(id);
+  $('rv_method').textContent=r.method==='dyn'?'[动力学]':'[运动学]';
+  $('rv_method').style.color=r.method==='dyn'?'var(--dynAccent)':'var(--accent)';
+  if(r.radius===Infinity||r.radius>1e6){$('rv_r').textContent='∞';$('rv_r').className='vl w';$('rv_d').textContent='无有效转弯';}
+  else if(r.radius<50){$('rv_r').textContent='≈ 0 m';$('rv_r').className='vl';$('rv_d').textContent='原地旋转';}
+  else{$('rv_r').textContent=(r.radius/1000).toFixed(3)+' m';$('rv_r').className='vl';$('rv_d').textContent=r.radius.toFixed(0)+' mm';}
+  if(r.icr){$('rv_i').textContent='X='+(r.icr.x/1000).toFixed(2)+'m  Y='+(r.icr.y/1000).toFixed(2)+'m';$('rv_i').style.color='';}
+  else{$('rv_i').textContent='无旋转中心';$('rv_i').style.color='var(--orange)';}
+  $('rv_m').textContent=r.mode;$('rv_m').style.color=r.warnings.length?'var(--orange)':'var(--green)';
+  $('wA').innerHTML=r.warnings.map(w=>`<div class="${w.startsWith('⚠')?'wb':'ib'}">${w}</div>`).join('');
+  const ds=[p.d1,p.d2,p.d3,p.d4];
+  for(let i=0;i<4;i++){
+    $('w'+i+'a').textContent=ds[i].toFixed(1);
+    $('w'+i+'r').textContent=r.wheelData[i].radius!=null?r.wheelData[i].radius.toFixed(0):'∞';
+    $('w'+i+'v').textContent=r.wheelData[i].speedRatio!=null?r.wheelData[i].speedRatio.toFixed(3):'-';
+    if(r.slipAngles)$('w'+i+'s').textContent=r.slipAngles[i]!=null?r.slipAngles[i].toFixed(3):'-';
+  }
+  if(currentMethod==='dyn'){
+    $('rv_omega').textContent=r.omega!=null?(r.omega*180/Math.PI).toFixed(4)+' °/s  ('+r.omega.toFixed(6)+' rad/s)':'—';
+    $('rv_beta').textContent=r.beta!=null?r.beta.toFixed(4)+'°':'—';
+    // Compare
+    const rk=lastKinResult,rd=lastDynResult;
+    if(rk.radius<1e6&&rd.radius<1e6&&rk.radius>0&&rd.radius>0){
+      $('cmp_rk').textContent=(rk.radius/1000).toFixed(3)+' m';
+      $('cmp_rd').textContent=(rd.radius/1000).toFixed(3)+' m';
+      const dr=rd.radius-rk.radius;
+      $('cmp_dr').textContent=(dr>=0?'+':'')+dr.toFixed(1)+' mm';
+      $('cmp_dr').style.color=Math.abs(dr)>100?'var(--orange)':'var(--green)';
+      const pct=rk.radius>0?(dr/rk.radius*100):0;
+      $('cmp_pct').textContent=(pct>=0?'+':'')+pct.toFixed(3)+' %';
+      $('cmp_pct').style.color=Math.abs(pct)>5?'var(--orange)':'var(--green)';
+      $('cmp_note').textContent=Math.abs(pct)<1?'差异<1%: 运动学近似有效':Math.abs(pct)<5?'差异1~5%: 侧偏有可测量影响':'差异>5%: 建议采用动力学结果';
+    }else{
+      $('cmp_rk').textContent=rk.radius>1e6?'∞':(rk.radius/1000).toFixed(3)+' m';
+      $('cmp_rd').textContent=rd.radius>1e6?'∞':(rd.radius/1000).toFixed(3)+' m';
+      $('cmp_dr').textContent='—';$('cmp_pct').textContent='—';$('cmp_note').textContent='';
+    }
+  }
+}
+
+/* ========== SELF-CHECK: automated test cases ========== */
+function runSelfCheck(p){
+  const tests=[],L=p.L,Wf=p.Wf,Wr=p.Wr;
+  const tp0={L,Wf,Wr,mass:p.mass,speed:p.speed,caF:p.caF,caR:p.caR};
+
+  // T1: Straight → R=∞
+  {const r=computeKin({...tp0,d1:0,d2:0,d3:0,d4:0});
+   tests.push({name:'T1 直行(0,0,0,0)→R=∞',pass:r.radius>1e6,detail:'R='+(r.radius>1e6?'∞':r.radius.toFixed(0))});}
+
+  // T2: Exact Ackermann → match theory
+  // Left turn: FL inner (larger angle, closer to ICR), FR outer: cot(FR)=cot(FL)+Wf/L
+  {const dFL=30,cotFL=1/Math.tan(dFL*D),cotFR=cotFL+Wf/L,dFR=Math.atan(1/cotFR)/D;
+   const r=computeKin({...tp0,d1:dFL,d2:dFR,d3:0,d4:0});
+   const Y_exp=L/Math.tan(dFL*D)+Wf/2, R_exp=Math.sqrt((L/2)**2+Y_exp**2), err=Math.abs(r.radius-R_exp);
+   tests.push({name:'T2 阿克曼精确('+dFL+'°/'+dFR.toFixed(1)+'°)',pass:err<1,
+     detail:'计算='+r.radius.toFixed(1)+', 理论='+R_exp.toFixed(1)+', 误差='+err.toFixed(2)+'mm'});}
+
+  // T3: Crab → R=∞
+  {const r=computeKin({...tp0,d1:20,d2:20,d3:20,d4:20});
+   tests.push({name:'T3 蟹行(20,20,20,20)→R=∞',pass:r.radius>1e6,detail:'R='+(r.radius>1e6?'∞':r.radius.toFixed(0))});}
+
+  // T4: Pivot → R≈0
+  {const r=computeKin({...tp0,d1:45,d2:-45,d3:-45,d4:45});
+   tests.push({name:'T4 原地旋转→R≈0',pass:r.radius<100,detail:'R='+r.radius.toFixed(0)+'mm'});}
+
+  // T5: Dynamic ≈ Kinematic at low speed (Ackermann 20°, 5km/h)
+  {const dFL=20,cotFL=1/Math.tan(dFL*D),cotFR=cotFL+Wf/L,dFR=Math.atan(1/cotFR)/D;
+   const tp={...tp0,d1:dFL,d2:dFR,d3:0,d4:0,speed:5};
+   const rk=computeKin(tp),rd=computeDyn(tp);
+   let pass=false,detail='';
+   if(rk.radius<1e6&&rd.radius<1e6&&rk.radius>0){
+     const pct=Math.abs(rd.radius-rk.radius)/rk.radius*100;pass=pct<2;
+     detail='Kin='+rk.radius.toFixed(0)+', Dyn='+rd.radius.toFixed(0)+', 差='+pct.toFixed(4)+'%';
+   }else detail='跳过(无限)';
+   tests.push({name:'T5 低速动/运一致(<2%)',pass,detail});}
+
+  // T6: Higher speed → larger dynamic deviation
+  {const dFL=25,cotFL=1/Math.tan(dFL*D),cotFR=cotFL+Wf/L,dFR=Math.atan(1/cotFR)/D;
+   const tpLo={...tp0,d1:dFL,d2:dFR,d3:0,d4:0,speed:2};
+   const tpHi={...tp0,d1:dFL,d2:dFR,d3:0,d4:0,speed:10};
+   const rk=computeKin(tpLo),rdLo=computeDyn(tpLo),rdHi=computeDyn(tpHi);
+   let pass=false,detail='';
+   if(rk.radius<1e6&&rdLo.radius<1e6&&rdHi.radius<1e6){
+     const dLo=Math.abs(rdLo.radius-rk.radius),dHi=Math.abs(rdHi.radius-rk.radius);
+     pass=dHi>=dLo*0.99; // allow tiny float tolerance
+     detail='2km/h Δ='+dLo.toFixed(1)+'mm, 10km/h Δ='+dHi.toFixed(1)+'mm';
+   }else detail='跳过';
+   tests.push({name:'T6 速度↑ → 偏差↑',pass,detail});}
+
+  // T7: Symmetric angles → ICR.y ≈ 0
+  {const r=computeKin({...tp0,d1:25,d2:-25,d3:0,d4:0});
+   const pass=r.icr?Math.abs(r.icr.y)<1:false;
+   tests.push({name:'T7 对称(25,-25,0,0)→ICR.y=0',pass,detail:'ICR.y='+(r.icr?r.icr.y.toFixed(2)+'mm':'N/A')});}
+
+  // T8: Dynamic Newton converges for current input
+  {const rd=lastDynResult;
+   const pass=rd.converged===true||rd.radius===Infinity||rd.radius>1e6||rd.radius<50;
+   tests.push({name:'T8 当前输入Newton收敛',pass,detail:rd.converged?'已收敛':(rd.radius>1e6?'退化(∞)':'未收敛!')});}
+
+  // T9: Dynamic ICR.y sign matches kinematic ICR.y (correct Ackermann)
+  {const dFL=20,cotFL=1/Math.tan(dFL*D),cotFR=cotFL+Wf/L,dFR=Math.atan(1/cotFR)/D;
+   const tp={...tp0,d1:dFL,d2:dFR,d3:0,d4:0,speed:3};
+   const rk=computeKin(tp),rd=computeDyn(tp);
+   let pass=false,detail='';
+   if(rk.icr&&rd.icr&&rk.radius<1e6&&rd.radius<1e6){
+     const sameSignY=(rk.icr.y>0)===(rd.icr.y>0);
+     const yErr=Math.abs(rd.icr.y-rk.icr.y);
+     const yPct=Math.abs(rk.icr.y)>1?yErr/Math.abs(rk.icr.y)*100:0;
+     pass=sameSignY&&yPct<5;
+     detail='Kin ICR.y='+rk.icr.y.toFixed(0)+', Dyn ICR.y='+rd.icr.y.toFixed(0)+', 差='+yPct.toFixed(2)+'%';
+   }else detail='跳过';
+   tests.push({name:'T9 动力学ICR方向一致',pass,detail});}
+
+  // T10: Exact Ackermann at very low speed → all dynamic slip angles ≈ 0
+  {const dFL=15,cotFL=1/Math.tan(dFL*D),cotFR=cotFL+Wf/L,dFR=Math.atan(1/cotFR)/D;
+   const tp={...tp0,d1:dFL,d2:dFR,d3:0,d4:0,speed:1};
+   const rd=computeDyn(tp);
+   let maxSlip=0;
+   if(rd.slipAngles)for(const s of rd.slipAngles)maxSlip=Math.max(maxSlip,Math.abs(s));
+   const pass=maxSlip<0.1;
+   tests.push({name:'T10 阿克曼→侧偏≈0(1km/h)',pass,detail:'最大侧偏='+maxSlip.toFixed(4)+'°'});}
+
+  const body=document.getElementById('scBody');
+  let passN=0; for(const t of tests)if(t.pass)passN++;
+  body.innerHTML=`<div style="margin-bottom:6px;font-weight:600;color:${passN===tests.length?'var(--green)':'var(--orange)'}">通过 ${passN}/${tests.length}</div>`
+    +tests.map(t=>`<div class="sc-item"><span class="${t.pass?'sc-pass':'sc-fail'}">${t.pass?'✓':'✗'}</span> <b>${t.name}</b><br><span class="sc-info">${t.detail}</span></div>`).join('');
+}
+
+/* ========== DRAWING ========== */
+function draw(){
+  const r=lastResult,p=lastParams;if(!r||!p)return;
+  const W=cwE.clientWidth,H=cwE.clientHeight;cvE.width=W;cvE.height=H;
+  const ctx=cvE.getContext('2d');ctx.clearRect(0,0,W,H);
+  const L=p.L,Wf=p.Wf,Wr=p.Wr;
+  const vs=Math.max(L,Wf)*3/manualZoom;
+  const sc=Math.min(W,H)*.85/vs;
+  document.getElementById('zLbl').textContent=Math.round(manualZoom*100)+'%';
+
+  const toC=(vx,vy)=>[W/2-(vy)*sc+panX*sc, H/2-(vx-L/2)*sc-panY*sc];
+
+  // Boundary
+  const bH=BOUND/2;
+  ctx.strokeStyle=isDark?'rgba(239,68,68,0.15)':'rgba(220,38,38,0.2)';ctx.lineWidth=2;ctx.setLineDash([10,6]);
+  const[bx1,by1]=toC(-bH,-bH),[bx2,by2]=toC(bH,bH);
+  ctx.strokeRect(Math.min(bx1,bx2),Math.min(by1,by2),Math.abs(bx2-bx1),Math.abs(by2-by1));ctx.setLineDash([]);
+  ctx.fillStyle=isDark?'rgba(239,68,68,0.25)':'rgba(220,38,38,0.35)';ctx.font='11px sans-serif';ctx.textAlign='center';
+  const[blx,bly]=toC(bH,0);ctx.fillText('150m 边界',blx,Math.min(by1,by2)+14);ctx.textAlign='left';
+
+  // Grid
+  ctx.strokeStyle=isDark?'#1a2030':'#e5e9ef';ctx.lineWidth=1;
+  const gs=vs>15000?5000:vs>8000?2000:vs>4000?1000:500;
+  for(let g=Math.ceil(-bH/gs)*gs;g<=bH;g+=gs){
+    let[x1,y1]=toC(g,-bH),[x2,y2]=toC(g,bH);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    [x1,y1]=toC(-bH,g);[x2,y2]=toC(bH,g);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+
+  let vX=0,vY=0,vA=0;
+  if(animOn&&animAngle!==0){
+    if(r.radius===Infinity||r.radius>1e6){
+      const avgD=(p.d1+p.d2+p.d3+p.d4)/4*D;
+      vX=Math.cos(avgD)*animAngle;vY=Math.sin(avgD)*animAngle;
+    }else{
+      // Rotate the rear-axle origin (0,0) around ICR by animAngle
+      // Point (0,0) relative to ICR: dx = 0 - icr.x, dy = 0 - icr.y
+      const ca=Math.cos(animAngle),sa=Math.sin(animAngle);
+      const dx0=-r.icr.x, dy0=-r.icr.y;
+      vX=r.icr.x+dx0*ca-dy0*sa;  // rear-axle origin world X
+      vY=r.icr.y+dx0*sa+dy0*ca;  // rear-axle origin world Y
+      vA=animAngle;
+    }
+  }
+  const toCv=(lx,ly)=>{const ca=Math.cos(vA),sa=Math.sin(vA);return toC(vX+lx*ca-ly*sa,vY+lx*sa+ly*ca);};
+
+  // Trail
+  if(animOn&&animTrail.length>1){ctx.beginPath();const[t0x,t0y]=toC(animTrail[0].x,animTrail[0].y);ctx.moveTo(t0x,t0y);
+    for(let i=1;i<animTrail.length;i++){const[tx,ty]=toC(animTrail[i].x,animTrail[i].y);ctx.lineTo(tx,ty);}
+    ctx.strokeStyle=isDark?'rgba(96,165,250,0.4)':'rgba(37,99,235,0.35)';ctx.lineWidth=2;ctx.stroke();}
+
+  // Body
+  ctx.beginPath();[[0,Wr/2],[L,Wf/2],[L,-Wf/2],[0,-Wr/2]].forEach((c,i)=>{const[px,py]=toCv(c[0],c[1]);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.closePath();
+  ctx.fillStyle=isDark?'rgba(59,130,246,0.07)':'rgba(37,99,235,0.06)';ctx.fill();
+  ctx.strokeStyle=isDark?'rgba(59,130,246,0.5)':'rgba(37,99,235,0.5)';ctx.lineWidth=2;ctx.stroke();
+
+  // Dimensions
+  if(!animOn){
+    ctx.strokeStyle=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.18)';ctx.lineWidth=1;
+    ctx.fillStyle=isDark?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.4)';ctx.font='11px sans-serif';ctx.textAlign='center';
+    let[a1,b1]=toCv(0,-Wr/2-350),[a2,b2]=toCv(L,-Wr/2-350);ctx.beginPath();ctx.moveTo(a1,b1);ctx.lineTo(a2,b2);ctx.stroke();
+    [a1,b1]=toCv(0,-Wr/2-250);[a2,b2]=toCv(0,-Wr/2-450);ctx.beginPath();ctx.moveTo(a1,b1);ctx.lineTo(a2,b2);ctx.stroke();
+    [a1,b1]=toCv(L,-Wr/2-250);[a2,b2]=toCv(L,-Wr/2-450);ctx.beginPath();ctx.moveTo(a1,b1);ctx.lineTo(a2,b2);ctx.stroke();
+    {const[mx,my]=toCv(L/2,-Wr/2-350);ctx.fillText('L='+L+'mm',mx,my-5);}
+    [a1,b1]=toCv(L+400,Wf/2);[a2,b2]=toCv(L+400,-Wf/2);ctx.beginPath();ctx.moveTo(a1,b1);ctx.lineTo(a2,b2);ctx.stroke();
+    {const[t1,t2]=toCv(L+300,Wf/2),[t3,t4]=toCv(L+500,Wf/2);ctx.beginPath();ctx.moveTo(t1,t2);ctx.lineTo(t3,t4);ctx.stroke();}
+    {const[t1,t2]=toCv(L+300,-Wf/2),[t3,t4]=toCv(L+500,-Wf/2);ctx.beginPath();ctx.moveTo(t1,t2);ctx.lineTo(t3,t4);ctx.stroke();}
+    {const[mx,my]=toCv(L+400,0);ctx.fillText('Wf='+Wf+'mm',mx-40,my+4);}
+    [a1,b1]=toCv(-400,Wr/2);[a2,b2]=toCv(-400,-Wr/2);ctx.beginPath();ctx.moveTo(a1,b1);ctx.lineTo(a2,b2);ctx.stroke();
+    {const[t1,t2]=toCv(-300,Wr/2),[t3,t4]=toCv(-500,Wr/2);ctx.beginPath();ctx.moveTo(t1,t2);ctx.lineTo(t3,t4);ctx.stroke();}
+    {const[t1,t2]=toCv(-300,-Wr/2),[t3,t4]=toCv(-500,-Wr/2);ctx.beginPath();ctx.moveTo(t1,t2);ctx.lineTo(t3,t4);ctx.stroke();}
+    {const[mx,my]=toCv(-400,0);ctx.fillText('Wr='+Wr+'mm',mx+40,my+4);}
+    ctx.textAlign='left';
+  }
+
+  // Forward arrow
+  {const[ax,ay]=toCv(L+250,0),[bx,by]=toCv(L-50,0);
+  ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ax,ay);ctx.strokeStyle=isDark?'rgba(59,130,246,0.5)':'rgba(37,99,235,0.5)';ctx.lineWidth=2;ctx.stroke();
+  const a=Math.atan2(ay-by,ax-bx);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax-9*Math.cos(a-.4),ay-9*Math.sin(a-.4));ctx.lineTo(ax-9*Math.cos(a+.4),ay-9*Math.sin(a+.4));ctx.closePath();ctx.fillStyle=isDark?'rgba(59,130,246,0.5)':'rgba(37,99,235,0.5)';ctx.fill();}
+
+  // CG
+  {const[cx,cy]=toCv(L/2,0);ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle=isDark?'#fff':'#1e293b';ctx.fill();ctx.fillStyle=isDark?'#94a3b8':'#64748b';ctx.font='11px sans-serif';ctx.fillText('CG',cx+5,cy+3);}
+
+  // Wheels
+  const WD=[{x:L,y:Wf/2,d:p.d1,c:'#3b82f6',n:'FL'},{x:L,y:-Wf/2,d:p.d2,c:'#8b5cf6',n:'FR'},{x:0,y:Wr/2,d:p.d3,c:'#22c55e',n:'RL'},{x:0,y:-Wr/2,d:p.d4,c:'#f59e0b',n:'RR'}];
+  for(const w of WD){
+    const[wx,wy]=toCv(w.x,w.y),dr=w.d*D;
+    const tw=Math.max(TW*sc,5),tl=Math.max(TL*sc,12);
+    ctx.save();ctx.translate(wx,wy);ctx.rotate(-dr-vA);
+    ctx.beginPath();ctx.roundRect(-tw/2,-tl/2,tw,tl,Math.min(tw*.2,3));ctx.fillStyle=w.c+(isDark?'55':'40');ctx.fill();ctx.strokeStyle=w.c;ctx.lineWidth=Math.max(1,sc*20);ctx.stroke();
+    ctx.strokeStyle=w.c+(isDark?'30':'25');ctx.lineWidth=1;for(let ty=-tl/2+tl*.12;ty<tl/2-tl*.08;ty+=tl*.1){ctx.beginPath();ctx.moveTo(-tw*.3,ty);ctx.lineTo(tw*.3,ty);ctx.stroke();}
+    ctx.fillStyle=w.c;ctx.beginPath();ctx.arc(0,-tl/2-Math.max(2,sc*25),Math.max(1.5,sc*15),0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    if(!animOn){const dxv=-Math.sin(dr),dyv=Math.cos(dr),ll=vs*1.5;const[lx1,ly1]=toCv(w.x+dxv*ll,w.y+dyv*ll),[lx2,ly2]=toCv(w.x-dxv*ll,w.y-dyv*ll);
+      ctx.beginPath();ctx.moveTo(lx1,ly1);ctx.lineTo(lx2,ly2);ctx.strokeStyle=w.c+(isDark?'20':'18');ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);}
+    ctx.fillStyle=w.c;ctx.font='bold 11px sans-serif';const off=w.y>=0?10:-52;ctx.fillText(w.n+' '+w.d.toFixed(1)+'°',wx+off,wy-Math.max(tl/2,6)-5);
+  }
+
+  // ICR
+  if(r.icr&&r.radius<1e6){
+    const icrColor=r.method==='dyn'?(isDark?'#c084fc':'#7c3aed'):'#ef4444';
+    if(!animOn){
+      const[ix,iy]=toC(r.icr.x,r.icr.y);
+      ctx.strokeStyle=icrColor;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ix-8,iy-8);ctx.lineTo(ix+8,iy+8);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ix+8,iy-8);ctx.lineTo(ix-8,iy+8);ctx.stroke();
+      ctx.beginPath();ctx.arc(ix,iy,11,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle=icrColor;ctx.font='bold 12px sans-serif';
+      ctx.fillText('ICR'+(r.method==='dyn'?' (dyn)':''),ix+14,iy+4);
+      const rPx=r.radius*sc;if(rPx>5&&rPx<W*3){ctx.beginPath();ctx.arc(ix,iy,rPx,0,Math.PI*2);ctx.strokeStyle=icrColor+'30';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);}
+      const[cgx,cgy]=toCv(L/2,0);ctx.beginPath();ctx.moveTo(ix,iy);ctx.lineTo(cgx,cgy);ctx.strokeStyle=icrColor+'80';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle=icrColor;ctx.font='11px sans-serif';ctx.fillText('R='+(r.radius/1000).toFixed(2)+'m',(ix+cgx)/2+6,(iy+cgy)/2-5);
+      // Ghost kinematic ICR when in dynamic mode
+      if(currentMethod==='dyn'&&lastKinResult&&lastKinResult.icr&&lastKinResult.radius<1e6){
+        const ki=lastKinResult.icr;const[kix,kiy]=toC(ki.x,ki.y);
+        ctx.strokeStyle='rgba(239,68,68,0.35)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(kix-6,kiy-6);ctx.lineTo(kix+6,kiy+6);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(kix+6,kiy-6);ctx.lineTo(kix-6,kiy+6);ctx.stroke();
+        ctx.beginPath();ctx.arc(kix,kiy,8,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='rgba(239,68,68,0.5)';ctx.font='10px sans-serif';ctx.fillText('ICR(kin)',kix+10,kiy+3);
+      }
+    }else{
+      // ICR is FIXED in world coordinates (the vehicle rotates around it)
+      // ICR's initial world position is (r.icr.x, r.icr.y) in rear-axle frame at t=0
+      // Since the world = rear-axle frame at t=0, ICR world position is simply (r.icr.x, r.icr.y)
+      const[ix,iy]=toC(r.icr.x, r.icr.y);
+      ctx.strokeStyle=icrColor+'80';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ix,iy,8,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle=icrColor+'80';ctx.font='11px sans-serif';ctx.fillText('ICR',ix+10,iy+3);
+    }
+  }
+
+  // Method label on canvas
+  const mClr=currentMethod==='dyn'?(isDark?'#c084fc':'#7c3aed'):(isDark?'#60a5fa':'#2563eb');
+  ctx.fillStyle=mClr;ctx.font='bold 12px sans-serif';ctx.textAlign='left';
+  ctx.fillText('● '+(currentMethod==='dyn'?'动力学模型':'运动学模型'),8,20);
+  ctx.fillStyle=isDark?'#4a5568':'#94a3b8';ctx.font='11px sans-serif';
+  ctx.fillText('蓝=FL 紫=FR 绿=RL 橙=RR ✕=ICR | 中键拖动 滚轮缩放'+(animOn?' | ▶动画 5km/h':''),8,H-8);
+}
+
+window.addEventListener('resize',()=>{if(!animOn)draw();});
+window.addEventListener('load',()=>{setTimeout(calc,100);});
+</script>
+</body>
+</html>
